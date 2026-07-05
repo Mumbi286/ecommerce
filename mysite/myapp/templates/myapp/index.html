@@ -1,11 +1,27 @@
 {% extends 'myapp/base.html' %}
 <!-- comment -->
 {% block body %}
-<h1>This is the index page</h1>
-{% for product in products %}
-<p>{{product.name}}</p>
-<img src="{{product.image.url}}" alt="" />
-<p>{{product.price}}</p>
-<p>{{product.description}}</p>
+<div>
+  <h1 class="text-2xl px-32 pt-10">Today's deals</h1>
+  <div class="px-32">
+    <hr class="border-t border-gray-300 my-6" />
+  </div>
+  <div class="grid grid-cols-4 px-32 gap-6">
+    {% for product in products %}
+    <div class="rounded-lg shadow-lg p-4">
+      <img
+        class="rounded-md mb-4 w-80 h-80 object-cover mx-auto"
+        src="{{product.image.url}}"
+        alt=""
+      />
+      <a class="text-lg font-semibold" href="">{{product.name}}</a>
+      <p class="text-gray-600">{{product.description}}</p>
+      <p class="text-green-500 font-bold mt-2 text-lg">KSH {{product.price}}</p>
+    </div>
 
-{% endfor%} {% endblock%}
+    {% endfor%}
+  </div>
+</div>
+
+{% endblock%}
+
