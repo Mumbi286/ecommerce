@@ -1,0 +1,14 @@
+# Virtual environment
+env/
+
+# Python
+__pycache__/
+*.pyc
+
+# Django
+db.sqlite3
+/mysite/media/
+
+# Editor/OS
+.vscode/
+.DS_Store
