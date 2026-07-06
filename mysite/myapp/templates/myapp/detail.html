@@ -1,4 +1,68 @@
-<h1>This is the detail page </h1>
-<h1>{{product.name}}</h1>
-<h1>{{product.price}}</h1>
-<h1>{{product.description}}</h1>
+{% extends 'myapp/base.html' %} {% block body %}
+<!-- Outermost container -->
+<div class="max-w-7xl mx-auto grid grid-cols-3 gap-10">
+  <!-- Product Image -->
+  <div class="col-span-1">
+    <img
+      class="w-80 h-80 rounded-lg shadow-sm"
+      src="{{product.image.url}}"
+      alt=""
+    />
+  </div>
+  <!-- Product Details -->
+  <div class="col-span-1 space-y-4">
+    <h1 class="text-2xl font-semibold text-gray-900">{{product.name}}</h1>
+    <div class="text-yellow-500">
+      ★★★★☆ <span class="text-gray-900">(12,321 ratings )</span>
+    </div>
+    <p class="text-3xl font-bold text-green-500">KSH {{product.price}}</p>
+    <p class="text-sm text-green-700 font-medium">Inclusive of all taxes</p>
+    <ul>
+      <li>{{product.description}}</li>
+    </ul>
+  </div>
+  <!-- Buy Box -->
+  <div class="col-span-1 border rounded-lg p-6 space-y-4 shadow-md">
+    <p class="text-2xl font-semibold text-gray-900">KSH {{product.price}}</p>
+    <div>
+      <select name="" id="select">
+        <option value="">1</option>
+        <option value="">2</option>
+        <option value="">3</option>
+      </select>
+    </div>
+    <p class="text-sm text-green-700">FREE delivery by Tommorrow</p>
+    {% if product.stock %}
+    <p class="text-sm text-green-700">In stock</p>
+    {% else %}
+    <p class="text-sm text-green-700">Out of stock</p>
+    {% endif %}
+    <button
+      id="atc"
+      value="{{product.id}}"
+      class="w-full bg-yellow-400 text-black font-semibold py-2 rounded-lg"
+    >
+      Add to Cart
+    </button>
+    <button class="w-full bg-gray-900 text-white font-semibold py-2 rounded-lg">
+      Buy now
+    </button>
+    <p class="text-sm text-green-600">Sold by: Kimathi Offical Store</p>
+  </div>
+</div>
+<script>
+  $(document).on("click", "#atc", function (e) {
+    console.log("Add to cart button clicked");
+    $.ajax({
+      type: "POST",
+      url: '{% url "cart_add" %}',
+      data: {
+        csrfmiddlewaretoken: "{{csrf_token}}",
+        product_id: $("#atc").val(),
+        product_quantity: $("#select option:selected").text(),
+      },
+    });
+  });
+</script>
+
+{% endblock %}

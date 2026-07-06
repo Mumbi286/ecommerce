@@ -14,7 +14,7 @@
         src="{{product.image.url}}"
         alt=""
       />
-      <a class="text-lg font-semibold" href="">{{product.name}}</a>
+      <a class="text-lg font-semibold" href="{{product.get_absolute_url}}">{{product.name}}</a>
       <p class="text-gray-600">{{product.description}}</p>
       <p class="text-green-500 font-bold mt-2 text-lg">KSH {{product.price}}</p>
     </div>
