@@ -12,8 +12,116 @@
     <title>Document</title>
   </head>
   <body>
+    <!--Nav-->
+    <nav
+      class="bg-gray-200 shadow-md px-4 py-2 px-16 flex items-center justify-between"
+    >
+      <!-- Logo -->
+      <div class="flex items-center space-x-2">
+        <!-- <img
+          src="https://via.placeholder.com/40"
+          alt="Logo"
+          class="h-10 w-10"
+        /> -->
+        <span class="text-md font-semibold text-gray-800 px-4"
+          >☰ Categories</span
+        >
+      </div>
+
+      <!-- Navigation Links (Hidden on Mobile) -->
+      <div class="hidden md:flex space-x-6 font-bold text-sm">
+        <a href="#" class="text-gray-700 hover:text-blue-600">Home</a>
+        <a href="#" class="text-gray-700 hover:text-blue-600">Shop</a>
+        <a href="#" class="text-gray-700 hover:text-blue-600">About</a>
+        <a href="#" class="text-gray-700 hover:text-blue-600">Contact</a>
+      </div>
+
+      <!-- Search Bar -->
+
+      <!-- Icons -->
+      <div class="flex items-center space-x-4 font-bold text-sm">
+        <a href="#" class="text-gray-700 hover:text-blue-600"
+          >Sell On ShopMate</a
+        >
+        <a href="#" class="text-gray-700 hover:text-blue-600"
+          >Track your order</a
+        >
+        <a href="#" class="text-gray-700 hover:text-blue-600">USD</a>
+        <a href="#" class="text-gray-700 hover:text-blue-600">🇮🇳 India</a>
+      </div>
+    </nav>
+    <nav
+      class="bg-blue-500 shadow-md px-4 py-3 px-16 flex items-center justify-between"
+    >
+      <!-- Logo -->
+      <div class="flex items-center space-x-2">
+        <!-- <img
+          src="https://via.placeholder.com/40"
+          alt="Logo"
+          class="h-10 w-10"
+        /> -->
+        <span class="text-xl font-semibold text-gray-800 px-4"
+          >Shop<span class="text-white">Mate</span>
+        </span>
+      </div>
+
+      <!-- Navigation Links (Hidden on Mobile) -->
+
+      <!-- Search Bar -->
+      <div class="lg:block flex-grow mx-6 bg-white">
+        <form class="relative w-full">
+          <input
+            type="text"
+            name="item_name"
+            placeholder="Search products..."
+            class="w-full px-4 py-2 pr-20 rounded-md border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-400"
+          />
+          <button
+            type="submit"
+            class="absolute right-1 top-1 bottom-1 px-4 bg-gray-900 text-white hover:bg-gray-700"
+          >
+            Search
+          </button>
+        </form>
+      </div>
+
+      <!-- Icons -->
+      <div class="flex items-center space-x-4">
+        <!-- Search Icon for Mobile -->
+        <button class="md:hidden text-gray-600 hover:text-blue-600">🔍</button>
+
+        <!-- Cart -->
+        <a href="{% url 'cart-overview' %}" class="relative">
+          🛒
+          <span
+            id="cart-qty"
+            class="absolute -top-2 -right-2 text-xs bg-red-500 text-white rounded-full px-1"
+          >
+            {% with qty_amount=cart|length %}
+            <!-- comment -->
+            {% if qty_amount > 0 %}
+            <!--  -->
+            {{qty_amount}}
+            <!-- comment -->
+            {% else %}
+            <!-- comment -->
+            {% endif %}
+            <!-- comment -->
+            {% endwith %}
+          </span>
+        </a>
+
+        <!-- User -->
+        <a href="#" class="text-gray-600 hover:text-blue-600">👤</a>
+
+        <!-- Hamburger Menu (Mobile) -->
+        <button class="md:hidden text-gray-600 hover:text-blue-600">☰</button>
+      </div>
+    </nav>
+    <!--Nav-->
     {% block body %}
-    <!-- Comment -->
-    {% endblock%}
+    <!--Comment-->
+
+    {% endblock %}
   </body>
 </html>
