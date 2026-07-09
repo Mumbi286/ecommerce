@@ -1,7 +1,10 @@
-from django.contrib.auth.forms import UserCreationForm
+from django.contrib.auth.forms import UserCreationForm,AuthenticationForm
 from django.contrib.auth.models import User
+from django import forms
 
 
+
+# creating user registation form  
 class CreateUserForm(UserCreationForm):
     class Meta:
         model = User
@@ -13,3 +16,10 @@ class CreateUserForm(UserCreationForm):
             fields.widget.attrs.update({
                 'class':'w-full px-3 py-2 border border-gray-300 rounded'
             })
+
+
+# Login form 
+class LoginForm(AuthenticationForm):
+    username = forms.CharField(widget=forms.TextInput())
+    password = forms.CharField(widget=forms.PasswordInput())
+
