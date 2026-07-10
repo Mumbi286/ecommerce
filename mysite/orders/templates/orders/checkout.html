@@ -1,0 +1,59 @@
+{% extends 'myapp/base.html' %}
+<!-- Comment -->
+{% block body %}
+
+<h1>This is a checkout page</h1>
+<form action="">
+  <h1>Complete your order</h1>
+  <p>Please recheck your address on which the items would be shipped</p>
+  <label for="">Full Name</label>
+  <input type="text" value="{{ address.full_name }}" name="" id="" />
+  <div>
+    <label for="">Address 1</label>
+    <input type="text" value="{{ address.line1 }}" name="" id="" />
+  </div>
+  <div>
+    <label for="">Address 2</label>
+    <input type="text" value="{{ address.line2 }}" name="" id="" />
+  </div>
+  <div>
+    <label for="">City </label>
+    <input type="text" value="{{ address.city }}" name="" id="" />
+  </div>
+  <div>
+    <label for="">State</label>
+    <input type="text" value="{{ address.state }}" name="" id="" />
+  </div>
+  <div>
+    <label for="">Postal Code</label>
+    <input type="text" value="{{ address.postal_code }}" name="" id="" />
+  </div>
+  <div>
+    <label for="">Country</label>
+    <input type="text" value="{{ address.country }}" name="" id="" />
+  </div>
+  <button type="submit">Complete Order</button>
+</form>
+<!-- Created a jquery so that I am able to see what happens when you click the complete order button  -->
+<!-- we will handle a submit event in our form -->
+<script>
+  $(document).on("submit", function (e) {
+    e.preventDefault();
+    $.ajax({
+      type: "POST",
+      url: "{% url 'place-order' %}",
+      data: {
+        csrfmiddlewaretoken: "{{csrf_token}}",
+        action: "post",
+      },
+      // if everything well we want to be redirected
+      success: function (json) {
+        window.location.replace("{% url 'order-success' %}");
+      },
+      error: function () {
+        window.location.replace("{% url 'order-failed' %}");
+      },
+    });
+  });
+</script>
+{% endblock %}
