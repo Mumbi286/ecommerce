@@ -1,10 +1,12 @@
 from django.shortcuts import render,redirect
+from django.contrib.auth.decorators import login_required
 from .forms import AddressForm
 from .models import Address,Order,OrderItem
 from cart.cart import Cart
 from django.http import JsonResponse
 
 # Create your views here.
+@login_required
 def add_address(request):
     try:
         address = Address.objects.get(user=request.user)
@@ -23,23 +25,23 @@ def add_address(request):
         form = AddressForm(instance=address)
     return render(request,'orders/add_address.html',{'form':form})
 
+@login_required
 def checkout(request):
     # an empty cart has nothing to check out - send the user back to their cart
     cart = Cart(request)
     if len(cart) == 0:
         return redirect('cart-overview')
-    # logged-in users get their saved address; guests get none
-    address = None
-    if request.user.is_authenticated:
-        try:
-            address = Address.objects.get(user=request.user)
-        except Address.DoesNotExist:
-            address = None
+    # login_required guarantees a logged-in user, so just fetch their address
+    try:
+        address = Address.objects.get(user=request.user)
+    except Address.DoesNotExist:
+        address = None
     return render(request,'orders/checkout.html',{'address':address})
 
 
+@login_required
 def place_order(request):
-    # when this process starts the order success is false 
+    # when this process starts the order success is false
     order_success=False
     # we need to check if the request method is post
     if request.method=="POST":
@@ -50,19 +52,11 @@ def place_order(request):
             return JsonResponse({'success': False, 'message': 'Your cart is empty'})
         total_amount = cart.get_total_price()
 
-
-        # checking if the user is authenticated
-        if request.user.is_authenticated:
-            order = Order.objects.create(user=request.user,total_amount=total_amount)
-            for item in cart:
-                OrderItem.objects.create(order=order,product=item['product'],quantity=item['qty'])
-            order_success= True
-        #  if the user is not authenticated, and we will perform the above and the only expection is that we dont want to pass the user
-        else:
-            order = Order.objects.create(total_amount=total_amount)
-            for item in cart:
-                OrderItem.objects.create(order=order,product=item['product'],quantity=item['qty'])
-            order_success=True
+        # login_required guarantees a user, so every order is linked to one
+        order = Order.objects.create(user=request.user,total_amount=total_amount)
+        for item in cart:
+            OrderItem.objects.create(order=order,product=item['product'],quantity=item['qty'])
+        order_success= True
     return JsonResponse({'success':order_success})
 
 

@@ -137,6 +137,9 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 MEDIA_ROOT = BASE_DIR / 'media'
 MEDIA_URL = '/media/'
 
+# where @login_required sends visitors who are not logged in
+LOGIN_URL = 'login'
+
 # Email credentials come from environment variables so they are never
 # committed to git. Set EMAIL_HOST_USER and EMAIL_HOST_PASSWORD (a Gmail
 # App Password) in your shell before running the server.

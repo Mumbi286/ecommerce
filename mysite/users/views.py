@@ -10,6 +10,8 @@ from .token import account_activation_token
 from .forms import LoginForm
 from .forms import UserUpdateForm
 from django.contrib.auth import authenticate,login,logout
+from django.contrib.auth.decorators import login_required
+from django.utils.http import url_has_allowed_host_and_scheme
 
 
 # Create your views here.
@@ -78,6 +80,11 @@ def user_login(request):
             user = authenticate(request,username=username,password=password)
             if user is not None:
                 login(request,user)
+                # if login_required sent the user here, take them back to
+                # the page they wanted; only allow paths on our own site
+                next_url = request.POST.get('next') or request.GET.get('next')
+                if next_url and url_has_allowed_host_and_scheme(next_url,allowed_hosts={request.get_host()}):
+                    return redirect(next_url)
                 return redirect('index')
             
 
@@ -87,8 +94,9 @@ def user_logout(request):
     logout(request)
     return redirect('index')
 
+@login_required
 def profile(request):
-    
+
     if request.method=="POST":
         user_form = UserUpdateForm(request.POST,instance=request.user)
         if user_form.is_valid():
