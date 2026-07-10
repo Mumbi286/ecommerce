@@ -52,9 +52,14 @@
         csrfmiddlewaretoken: "{{csrf_token}}",
         action: "post",
       },
-      // if everything well we want to be redirected
+      // if everything went well we want to be redirected;
+      // json.success is false when the server refused (e.g. empty cart)
       success: function (json) {
-        window.location.replace("{% url 'order-success' %}");
+        if (json.success) {
+          window.location.replace("{% url 'order-success' %}");
+        } else {
+          window.location.replace("{% url 'cart-overview' %}");
+        }
       },
       error: function () {
         window.location.replace("{% url 'order-failed' %}");

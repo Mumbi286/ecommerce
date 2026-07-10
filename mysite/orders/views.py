@@ -24,6 +24,10 @@ def add_address(request):
     return render(request,'orders/add_address.html',{'form':form})
 
 def checkout(request):
+    # an empty cart has nothing to check out - send the user back to their cart
+    cart = Cart(request)
+    if len(cart) == 0:
+        return redirect('cart-overview')
     # logged-in users get their saved address; guests get none
     address = None
     if request.user.is_authenticated:
@@ -41,6 +45,9 @@ def place_order(request):
     if request.method=="POST":
         #  we need to check the cart instance so as we fetch all items in our cart
         cart = Cart(request)
+        # refuse to create an order from an empty cart
+        if len(cart) == 0:
+            return JsonResponse({'success': False, 'message': 'Your cart is empty'})
         total_amount = cart.get_total_price()
 
 
