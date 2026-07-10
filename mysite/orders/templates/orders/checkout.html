@@ -9,20 +9,26 @@
   <label for="">Full Name</label>
   <input type="text" value="{{ address.full_name }}" name="" id="" />
   <div>
-    <label for="">Address 1</label>
-    <input type="text" value="{{ address.line1 }}" name="" id="" />
+    <label for="">Phone</label>
+    <input type="text" value="{{ address.phone }}" name="" id="" />
+  </div>
+  {% if address.phone_alt %}
+  <div>
+    <label for="">Alternative Phone</label>
+    <input type="text" value="{{ address.phone_alt }}" name="" id="" />
+  </div>
+  {% endif %}
+  <div>
+    <label for="">Delivery Details</label>
+    <input type="text" value="{{ address.delivery_details }}" name="" id="" />
   </div>
   <div>
-    <label for="">Address 2</label>
-    <input type="text" value="{{ address.line2 }}" name="" id="" />
-  </div>
-  <div>
-    <label for="">City </label>
+    <label for="">City / Town</label>
     <input type="text" value="{{ address.city }}" name="" id="" />
   </div>
   <div>
-    <label for="">State</label>
-    <input type="text" value="{{ address.state }}" name="" id="" />
+    <label for="">County</label>
+    <input type="text" value="{{ address.county }}" name="" id="" />
   </div>
   <div>
     <label for="">Postal Code</label>

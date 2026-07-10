@@ -11,26 +11,28 @@ def add_address(request):
     except Address.DoesNotExist:
         address=None
     if request.method=="POST":
-        form = AddressForm(request.POST)
+        # instance=address updates the existing address instead of creating a duplicate
+        form = AddressForm(request.POST,instance=address)
         if form.is_valid():
             address = form.save(commit=False)
             address.user = request.user
             address.save()
             return redirect("index")
-    form = AddressForm(instance=address)
+        # invalid form falls through so its error messages are shown on the page
+    else:
+        form = AddressForm(instance=address)
     return render(request,'orders/add_address.html',{'form':form})
 
 def checkout(request):
-    # to check if the user is logged in and is also authenticated
+    # logged-in users get their saved address; guests get none
+    address = None
     if request.user.is_authenticated:
         try:
             address = Address.objects.get(user=request.user)
-            return render(request,'orders/checkout.html',{'address':address})
-        except:
-            return render(request,'orders/checkout.html')
-        else:
-            return render(request,'orders/checkout.html')
-        
+        except Address.DoesNotExist:
+            address = None
+    return render(request,'orders/checkout.html',{'address':address})
+
 
 def place_order(request):
     # when this process starts the order success is false 
