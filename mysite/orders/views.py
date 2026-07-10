@@ -56,6 +56,8 @@ def place_order(request):
         order = Order.objects.create(user=request.user,total_amount=total_amount)
         for item in cart:
             OrderItem.objects.create(order=order,product=item['product'],quantity=item['qty'])
+        # the items are now in the order, so the cart starts fresh
+        cart.clear()
         order_success= True
     return JsonResponse({'success':order_success})
 

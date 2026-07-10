@@ -60,6 +60,11 @@ class Cart():
             del self.cart[product_id]
         self.session.modified=True # makes sure the cart stored into the session is updated
 
+    def clear(self):
+        # empties the whole cart, e.g. right after an order is placed
+        self.cart.clear()
+        self.session.modified=True
+
     def update(self,product,qty):
         product_id = str(product)
         product_quantity = qty
