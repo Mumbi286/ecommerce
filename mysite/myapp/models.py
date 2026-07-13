@@ -12,7 +12,9 @@ class Product(models.Model):
 
 
     name = models.CharField(max_length=100)
-    price = models.FloatField()
+    # money must be exact - DecimalField stores 10 digits, 2 after the
+    # point (max 99,999,999.99), matching Order.total_amount
+    price = models.DecimalField(max_digits=10, decimal_places=2)
     description = models.TextField()
     image = models.ImageField(upload_to='images/')
     slug = models.SlugField(unique=True,blank=True)
