@@ -97,7 +97,7 @@ ecom/
    python manage.py runserver
    ```
 
-   Visit **http://127.0.0.1:8000/** for the store and **http://127.0.0.1:8000/admin/** to add products.
+
 
 ## Running the Tests
 
