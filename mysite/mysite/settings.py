@@ -42,6 +42,8 @@ INSTALLED_APPS = [
     'mathfilters',
     'users',
     'orders',
+    'rest_framework',
+    'corsheaders',
     'django.contrib.admin',
     'django.contrib.auth',
     'django.contrib.contenttypes',
@@ -52,6 +54,9 @@ INSTALLED_APPS = [
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
+    # CORS headers must be added before any middleware that can produce
+    # a response, so browsers see them even on redirects and errors
+    'corsheaders.middleware.CorsMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
@@ -160,3 +165,22 @@ else:
     # No credentials set: print emails to the terminal instead of sending,
     # so registration still works during local development.
     EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
+
+# --- API (Phase 1) ---
+
+# Browsers block JS on one origin from reading responses from another
+# unless the server allows it. Allow ONLY the Vite dev server for now;
+# the production frontend domain gets added in Phase 6. Never use a
+# wildcard here - that would let any website script against our API.
+CORS_ALLOWED_ORIGINS = [
+    'http://localhost:5173',    # Vite's default dev address
+    'http://127.0.0.1:5173',    # same server, but the browser treats
+                                # localhost and 127.0.0.1 as different origins
+]
+
+REST_FRAMEWORK = {
+    # every list endpoint is paginated unless it opts out - page size 12
+    # fills the product grid (4 columns x 3 rows) exactly
+    'DEFAULT_PAGINATION_CLASS': 'rest_framework.pagination.PageNumberPagination',
+    'PAGE_SIZE': 12,
+}
