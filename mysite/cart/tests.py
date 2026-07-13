@@ -1,4 +1,4 @@
-from django.test import TestCase
+from django.test import Client, TestCase
 from django.urls import reverse
 
 from myapp.models import Product
@@ -67,3 +67,13 @@ class CartViewTests(TestCase):
             'product_id': self.product.id, 'product_quantity': 4,
         })
         self.assertEqual(self.client.session['cart'][str(self.product.id)]['qty'], '4')
+
+
+class CsrfProtectionTests(TestCase):
+    def test_cart_add_without_csrf_token_is_rejected(self):
+        # the normal test client skips CSRF checks; this one enforces them
+        client = Client(enforce_csrf_checks=True)
+        product = make_product()
+        response = client.post(reverse('cart_add'), {
+            'product_id': product.id, 'product_quantity': 1})
+        self.assertEqual(response.status_code, 403)
