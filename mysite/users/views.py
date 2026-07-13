@@ -35,8 +35,16 @@ def register(request):
                 'token': account_activation_token.make_token(user),
             })
             # sending the email to the user
-            user.email_user(subject=subject,message=message)
-            return redirect('email-verification-sent')
+            try:
+                user.email_user(subject=subject,message=message)
+            except OSError:
+                # email could not be sent (SMTP down, bad credentials, no
+                # network). Delete the half-created account so the username
+                # is free to try again, and show an error on the form.
+                user.delete()
+                form.add_error(None,'We could not send the verification email. Please try again in a few minutes.')
+            else:
+                return redirect('email-verification-sent')
 
 
 
