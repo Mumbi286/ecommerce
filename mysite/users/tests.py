@@ -4,6 +4,10 @@ from django.core.mail.backends.base import BaseEmailBackend
 from django.test import TestCase
 from django.test import override_settings
 from django.urls import reverse
+from django.utils.encoding import force_bytes
+from django.utils.http import urlsafe_base64_encode
+
+from .token import account_activation_token
 
 
 class FailingEmailBackend(BaseEmailBackend):
@@ -36,3 +40,37 @@ class RegistrationEmailTests(TestCase):
         self.assertContains(response, 'could not send the verification email')
         # and the half-created account was rolled back
         self.assertFalse(User.objects.filter(username='wanjiku').exists())
+
+
+class EmailVerificationTests(TestCase):
+    def make_inactive_user(self):
+        return User.objects.create_user(
+            username='wanjiku', email='wanjiku@example.com',
+            password='a-strong-pass-123', is_active=False,
+        )
+
+    def test_valid_link_activates_the_account(self):
+        user = self.make_inactive_user()
+        uid = urlsafe_base64_encode(force_bytes(user.pk))
+        token = account_activation_token.make_token(user)
+        response = self.client.get(reverse('email-verification', args=[uid, token]))
+        self.assertRedirects(response, reverse('email-verification-success'))
+        user.refresh_from_db()
+        self.assertTrue(user.is_active)
+
+    def test_garbage_uidb64_shows_failed_page_instead_of_crashing(self):
+        response = self.client.get(reverse('email-verification', args=['not-base64!!', 'sometoken']))
+        self.assertRedirects(response, reverse('email-verification-failed'))
+
+    def test_nonexistent_user_id_shows_failed_page(self):
+        uid = urlsafe_base64_encode(force_bytes(999))
+        response = self.client.get(reverse('email-verification', args=[uid, 'sometoken']))
+        self.assertRedirects(response, reverse('email-verification-failed'))
+
+    def test_link_stops_working_after_activation(self):
+        user = self.make_inactive_user()
+        uid = urlsafe_base64_encode(force_bytes(user.pk))
+        token = account_activation_token.make_token(user)
+        self.client.get(reverse('email-verification', args=[uid, token]))   # first click activates
+        response = self.client.get(reverse('email-verification', args=[uid, token]))  # second click
+        self.assertRedirects(response, reverse('email-verification-failed'))

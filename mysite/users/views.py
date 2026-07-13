@@ -54,8 +54,13 @@ def register(request):
     return render(request,'users/register.html',{'form':form})
 
 def email_verification(request,uidb64,token):
-    unique_id = force_str(urlsafe_base64_decode(uidb64))
-    user = User.objects.get(pk=unique_id)
+    try:
+        unique_id = force_str(urlsafe_base64_decode(uidb64))
+        user = User.objects.get(pk=unique_id)
+    except (TypeError,ValueError,OverflowError,User.DoesNotExist):
+        # the link is malformed or points to no real user - treat it
+        # exactly like a bad token instead of crashing
+        user = None
     # checking if the user exists
     if user and account_activation_token.check_token(user,token):
         user.is_active=True
