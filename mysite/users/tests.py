@@ -74,3 +74,19 @@ class EmailVerificationTests(TestCase):
         self.client.get(reverse('email-verification', args=[uid, token]))   # first click activates
         response = self.client.get(reverse('email-verification', args=[uid, token]))  # second click
         self.assertRedirects(response, reverse('email-verification-failed'))
+
+
+class ProfileTests(TestCase):
+    def setUp(self):
+        User.objects.create_user('wanjiku', 'wanjiku@example.com', 'a-strong-pass-123')
+        self.client.login(username='wanjiku', password='a-strong-pass-123')
+
+    def test_invalid_update_shows_the_error(self):
+        response = self.client.post(reverse('profile'), {'username': '', 'email': 'w@example.com'})
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, 'This field is required')
+
+    def test_valid_update_changes_the_username(self):
+        response = self.client.post(reverse('profile'), {'username': 'wanjiku2', 'email': 'w@example.com'})
+        self.assertRedirects(response, reverse('index'))
+        self.assertTrue(User.objects.filter(username='wanjiku2').exists())

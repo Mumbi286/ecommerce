@@ -66,7 +66,20 @@ class CartViewTests(TestCase):
         self.client.post(reverse('cart_update'), {
             'product_id': self.product.id, 'product_quantity': 4,
         })
-        self.assertEqual(self.client.session['cart'][str(self.product.id)]['qty'], '4')
+        self.assertEqual(self.client.session['cart'][str(self.product.id)]['qty'], 4)
+
+    def test_get_request_is_rejected_with_405(self):
+        self.assertEqual(self.client.get(reverse('cart_add')).status_code, 405)
+
+    def test_non_numeric_quantity_is_rejected_with_400(self):
+        response = self.client.post(reverse('cart_add'), {
+            'product_id': self.product.id, 'product_quantity': 'abc'})
+        self.assertEqual(response.status_code, 400)
+
+    def test_unknown_product_returns_404(self):
+        response = self.client.post(reverse('cart_add'), {
+            'product_id': 99999, 'product_quantity': 1})
+        self.assertEqual(response.status_code, 404)
 
 
 class CsrfProtectionTests(TestCase):

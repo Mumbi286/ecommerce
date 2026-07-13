@@ -27,7 +27,7 @@ def register(request):
 
 
             # Email verification logic
-            subject = 'Verify your email to activate your accoount'
+            subject = 'Verify your email to activate your account'
             message = render_to_string('users/email-verification.html',{
                 'user':user,
                 'domain': current_site.domain,
@@ -115,8 +115,9 @@ def profile(request):
         if user_form.is_valid():
             user_form.save()
             return redirect('index')
-    user_form = UserUpdateForm(instance=request.user)
-        
+    else:
+        user_form = UserUpdateForm(instance=request.user)
+
 
     return render(request,'users/profile.html',{'user_form':user_form})
 

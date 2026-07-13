@@ -32,3 +32,7 @@ class ProductPageTests(TestCase):
         product = make_product()
         response = self.client.get(product.get_absolute_url())
         self.assertContains(response, product.name)
+
+    def test_unknown_slug_returns_404_not_a_crash(self):
+        response = self.client.get('/no-such-product')
+        self.assertEqual(response.status_code, 404)
