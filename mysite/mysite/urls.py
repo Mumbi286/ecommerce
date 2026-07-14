@@ -28,6 +28,7 @@ urlpatterns = [
     # JSON API - the HTML views above keep working during the transition
     path('api/products/', include('myapp.api_urls')),
     path('api/cart/', include('cart.api_urls')),
+    path('api/orders/', include('orders.api_urls')),
 
 ]
 urlpatterns+= static(settings.MEDIA_URL,document_root= settings.MEDIA_ROOT)
