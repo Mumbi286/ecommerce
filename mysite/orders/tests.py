@@ -126,6 +126,12 @@ class PlaceOrderTests(TestCase):
             'wanjiku', 'wanjiku@example.com', 'a-strong-pass-123')
         self.product = make_product()
 
+    def save_address(self):
+        return Address.objects.create(
+            user=self.user, full_name='Jane Wanjiku', phone='+254712345678',
+            delivery_details='Greenhouse Apartments, Ngong Road',
+            city='Nairobi', county='Nairobi', postal_code='00100')
+
     def login(self):
         self.client.login(username='wanjiku', password='a-strong-pass-123')
 
@@ -146,6 +152,7 @@ class PlaceOrderTests(TestCase):
 
     def test_order_is_created_from_the_cart_and_the_cart_is_cleared(self):
         self.login()
+        self.save_address()
         self.fill_cart(qty=2)
         response = self.client.post(reverse('place-order'))
         self.assertTrue(response.json()['success'])
@@ -156,6 +163,37 @@ class PlaceOrderTests(TestCase):
         self.assertEqual(item.product, self.product)
         self.assertEqual(item.quantity, 2)
         self.assertEqual(self.client.session['cart'], {})
+
+    def test_order_without_an_address_is_refused(self):
+        self.login()
+        self.fill_cart(qty=2)
+        response = self.client.post(reverse('place-order'))
+        self.assertFalse(response.json()['success'])
+        self.assertIn('address', response.json()['message'])
+        self.assertEqual(Order.objects.count(), 0)
+
+    def test_order_snapshots_the_delivery_address(self):
+        self.login()
+        self.save_address()
+        self.fill_cart(qty=2)
+        self.client.post(reverse('place-order'))
+        order = Order.objects.get(user=self.user)
+        self.assertEqual(order.full_name, 'Jane Wanjiku')
+        self.assertEqual(order.phone, '+254712345678')
+        self.assertEqual(order.county, 'Nairobi')
+        self.assertEqual(order.country, 'Kenya')
+
+    def test_editing_the_address_later_does_not_rewrite_the_order(self):
+        self.login()
+        address = self.save_address()
+        self.fill_cart(qty=2)
+        self.client.post(reverse('place-order'))
+        # the user moves from Nairobi to Mombasa AFTER ordering
+        address.city = 'Mombasa'
+        address.county = 'Mombasa'
+        address.save()
+        order = Order.objects.get(user=self.user)
+        self.assertEqual(order.county, 'Nairobi')   # history is frozen
 
 
 class CsrfProtectionTests(TestCase):

@@ -90,3 +90,69 @@ class CsrfProtectionTests(TestCase):
         response = client.post(reverse('cart_add'), {
             'product_id': product.id, 'product_quantity': 1})
         self.assertEqual(response.status_code, 403)
+
+
+class CartAPITests(TestCase):
+    def setUp(self):
+        self.product = make_product()
+
+    def api_add(self, qty=2):
+        return self.client.post('/api/cart/', {
+            'product_id': self.product.id, 'qty': qty})
+
+    def test_empty_cart_has_the_full_shape(self):
+        data = self.client.get('/api/cart/').json()
+        self.assertEqual(data, {'items': [], 'total_qty': 0, 'total_price': '0'})
+
+    def test_add_returns_201_and_the_whole_cart(self):
+        response = self.api_add(qty=2)
+        self.assertEqual(response.status_code, 201)
+        data = response.json()
+        self.assertEqual(data['total_qty'], 2)
+        self.assertEqual(data['total_price'], '700.00')     # exact, as a string
+        item = data['items'][0]
+        self.assertEqual(item['product_id'], self.product.id)
+        self.assertEqual(item['price'], '350.00')
+        self.assertEqual(item['line_total'], '700.00')
+
+    def test_add_shares_the_session_cart_with_the_html_views(self):
+        # the API and the old jQuery endpoints write to the SAME cart
+        self.api_add(qty=2)
+        response = self.client.post(reverse('cart_delete'), {
+            'product_id': self.product.id})
+        self.assertEqual(response.json()['qty'], 0)
+
+    def test_add_rejects_a_bad_quantity_with_400(self):
+        response = self.client.post('/api/cart/', {
+            'product_id': self.product.id, 'qty': 'abc'})
+        self.assertEqual(response.status_code, 400)
+
+    def test_add_unknown_product_returns_json_404(self):
+        response = self.client.post('/api/cart/', {'product_id': 99999, 'qty': 1})
+        self.assertEqual(response.status_code, 404)
+        self.assertIn('detail', response.json())            # JSON, not an HTML page
+
+    def test_patch_changes_the_quantity(self):
+        self.api_add(qty=1)
+        response = self.client.patch(
+            f'/api/cart/{self.product.id}/', {'qty': 4},
+            content_type='application/json')
+        self.assertEqual(response.json()['total_qty'], 4)
+
+    def test_patch_a_product_not_in_the_cart_returns_404(self):
+        response = self.client.patch(
+            f'/api/cart/{self.product.id}/', {'qty': 4},
+            content_type='application/json')
+        self.assertEqual(response.status_code, 404)
+
+    def test_delete_removes_the_item(self):
+        self.api_add(qty=2)
+        response = self.client.delete(f'/api/cart/{self.product.id}/')
+        self.assertEqual(response.json(), {
+            'items': [], 'total_qty': 0, 'total_price': '0'})
+
+    def test_post_without_csrf_token_is_rejected(self):
+        client = Client(enforce_csrf_checks=True)
+        response = client.post('/api/cart/', {
+            'product_id': self.product.id, 'qty': 1})
+        self.assertEqual(response.status_code, 403)
