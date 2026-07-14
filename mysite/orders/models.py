@@ -50,6 +50,14 @@ class Address(models.Model):
     # deliveries are Kenya-only, so this is fixed and not shown on the form
     country = models.CharField(max_length=100,default="Kenya",editable=False)
 
+# copied onto each Order at purchase time - one list, so the model
+# fields and the snapshot logic in place_order can never drift apart
+ADDRESS_SNAPSHOT_FIELDS = [
+    'full_name', 'phone', 'phone_alt', 'delivery_details',
+    'city', 'county', 'postal_code', 'country',
+]
+
+
 # when a user places an order
 class Order(models.Model):
     # null=True allows guest orders that are not linked to any account
@@ -57,6 +65,18 @@ class Order(models.Model):
     total_amount = models.DecimalField(max_digits=10,decimal_places=2,default=0)
     is_paid = models.BooleanField(default=False)
     created_at = models.DateTimeField(auto_now_add=True)
+
+    # frozen copy of the delivery address at purchase time - editing or
+    # deleting the user's Address must never rewrite order history
+    # (blank defaults keep orders placed before this change valid)
+    full_name = models.CharField(max_length=100, blank=True, default="")
+    phone = models.CharField(max_length=13, blank=True, default="")
+    phone_alt = models.CharField(max_length=13, blank=True, default="")
+    delivery_details = models.CharField(max_length=255, blank=True, default="")
+    city = models.CharField(max_length=100, blank=True, default="")
+    county = models.CharField(max_length=30, blank=True, default="")
+    postal_code = models.CharField(max_length=5, blank=True, default="")
+    country = models.CharField(max_length=100, blank=True, default="")
 
 
 # information on the items that the user has ordered
