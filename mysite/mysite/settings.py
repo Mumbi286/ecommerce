@@ -10,10 +10,16 @@ For the full list of settings and their values, see
 https://docs.djangoproject.com/en/4.2/ref/settings/
 """
 
+import os
 from pathlib import Path
+
+from dotenv import load_dotenv
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
+
+# Load secret credentials from mysite/.env (gitignored) into the environment.
+load_dotenv(BASE_DIR / '.env')
 
 
 # Quick-start development settings - unsuitable for production
@@ -36,6 +42,8 @@ INSTALLED_APPS = [
     'mathfilters',
     'users',
     'orders',
+    'rest_framework',
+    'corsheaders',
     'django.contrib.admin',
     'django.contrib.auth',
     'django.contrib.contenttypes',
@@ -46,6 +54,9 @@ INSTALLED_APPS = [
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
+    # CORS headers must be added before any middleware that can produce
+    # a response, so browsers see them even on redirects and errors
+    'corsheaders.middleware.CorsMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
@@ -131,10 +142,45 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 MEDIA_ROOT = BASE_DIR / 'media'
 MEDIA_URL = '/media/'
 
-# EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
-EMAIL_BACKEND='django.core.mail.backends.smtp.EmailBackend'
-EMAIL_HOST='smtp.gmail.com'
-EMAIL_PORT='587'
-EMAIL_USE_TLS='True'
-EMAIL_HOST_USER='sirensudo@gmail.com'
-EMAIL_HOST_PASSWORD='mawgerrlqktqgbit'
+# where @login_required sends visitors who are not logged in
+LOGIN_URL = 'login'
+
+# sessions (cart + login) end when the browser is closed, so every
+# fresh visit starts with a clean cart
+SESSION_EXPIRE_AT_BROWSER_CLOSE = True
+
+# Email credentials come from environment variables so they are never
+# committed to git. Set EMAIL_HOST_USER and EMAIL_HOST_PASSWORD (a Gmail
+# App Password) in your shell before running the server.
+EMAIL_HOST = 'smtp.gmail.com'
+EMAIL_PORT = 587
+EMAIL_USE_TLS = True
+EMAIL_HOST_USER = os.environ.get('EMAIL_HOST_USER')
+EMAIL_HOST_PASSWORD = os.environ.get('EMAIL_HOST_PASSWORD')
+
+if EMAIL_HOST_USER and EMAIL_HOST_PASSWORD:
+    EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
+    DEFAULT_FROM_EMAIL = EMAIL_HOST_USER
+else:
+    # No credentials set: print emails to the terminal instead of sending,
+    # so registration still works during local development.
+    EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
+
+# --- API (Phase 1) ---
+
+# Browsers block JS on one origin from reading responses from another
+# unless the server allows it. Allow ONLY the Vite dev server for now;
+# the production frontend domain gets added in Phase 6. Never use a
+# wildcard here - that would let any website script against our API.
+CORS_ALLOWED_ORIGINS = [
+    'http://localhost:5173',    # Vite's default dev address
+    'http://127.0.0.1:5173',    # same server, but the browser treats
+                                # localhost and 127.0.0.1 as different origins
+]
+
+REST_FRAMEWORK = {
+    # every list endpoint is paginated unless it opts out - page size 12
+    # fills the product grid (4 columns x 3 rows) exactly
+    'DEFAULT_PAGINATION_CLASS': 'rest_framework.pagination.PageNumberPagination',
+    'PAGE_SIZE': 12,
+}

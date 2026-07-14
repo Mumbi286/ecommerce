@@ -10,6 +10,8 @@ from .token import account_activation_token
 from .forms import LoginForm
 from .forms import UserUpdateForm
 from django.contrib.auth import authenticate,login,logout
+from django.contrib.auth.decorators import login_required
+from django.utils.http import url_has_allowed_host_and_scheme
 
 
 # Create your views here.
@@ -25,7 +27,7 @@ def register(request):
 
 
             # Email verification logic
-            subject = 'Verify your email to activate your accoount'
+            subject = 'Verify your email to activate your account'
             message = render_to_string('users/email-verification.html',{
                 'user':user,
                 'domain': current_site.domain,
@@ -33,8 +35,16 @@ def register(request):
                 'token': account_activation_token.make_token(user),
             })
             # sending the email to the user
-            user.email_user(subject=subject,message=message)
-            return redirect('email-verification-sent')
+            try:
+                user.email_user(subject=subject,message=message)
+            except OSError:
+                # email could not be sent (SMTP down, bad credentials, no
+                # network). Delete the half-created account so the username
+                # is free to try again, and show an error on the form.
+                user.delete()
+                form.add_error(None,'We could not send the verification email. Please try again in a few minutes.')
+            else:
+                return redirect('email-verification-sent')
 
 
 
@@ -44,8 +54,13 @@ def register(request):
     return render(request,'users/register.html',{'form':form})
 
 def email_verification(request,uidb64,token):
-    unique_id = force_str(urlsafe_base64_decode(uidb64))
-    user = User.objects.get(pk=unique_id)
+    try:
+        unique_id = force_str(urlsafe_base64_decode(uidb64))
+        user = User.objects.get(pk=unique_id)
+    except (TypeError,ValueError,OverflowError,User.DoesNotExist):
+        # the link is malformed or points to no real user - treat it
+        # exactly like a bad token instead of crashing
+        user = None
     # checking if the user exists
     if user and account_activation_token.check_token(user,token):
         user.is_active=True
@@ -78,6 +93,11 @@ def user_login(request):
             user = authenticate(request,username=username,password=password)
             if user is not None:
                 login(request,user)
+                # if login_required sent the user here, take them back to
+                # the page they wanted; only allow paths on our own site
+                next_url = request.POST.get('next') or request.GET.get('next')
+                if next_url and url_has_allowed_host_and_scheme(next_url,allowed_hosts={request.get_host()}):
+                    return redirect(next_url)
                 return redirect('index')
             
 
@@ -87,15 +107,17 @@ def user_logout(request):
     logout(request)
     return redirect('index')
 
+@login_required
 def profile(request):
-    
+
     if request.method=="POST":
         user_form = UserUpdateForm(request.POST,instance=request.user)
         if user_form.is_valid():
             user_form.save()
             return redirect('index')
-    user_form = UserUpdateForm(instance=request.user)
-        
+    else:
+        user_form = UserUpdateForm(instance=request.user)
+
 
     return render(request,'users/profile.html',{'user_form':user_form})
 

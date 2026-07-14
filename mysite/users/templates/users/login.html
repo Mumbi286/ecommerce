@@ -1,6 +1,10 @@
 <h1>Login page</h1>
 <form method="POST">
     {% csrf_token %}
+    {% if request.GET.next %}
+    <!-- carries the page the user was trying to reach through the login POST -->
+    <input type="hidden" name="next" value="{{ request.GET.next }}" />
+    {% endif %}
     {{form}}
 <button type="submit">Login</button>
 </form>

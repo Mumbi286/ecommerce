@@ -1,7 +1,52 @@
-<h1>Add address</h1>
-<form action="" method="POST">
-  {% csrf_token %}
-  <!-- comment -->
-  {{form}}
-  <button type="submit">Save Address</button>
-</form>
+{% extends 'myapp/base.html' %}
+<!-- Reuses the site-wide layout (navbar, Tailwind, jQuery) from base.html;
+     this page only fills in the 'body' block below -->
+{% block body %}
+<!-- min-h-screen + flex centers the white card in the middle of the page -->
+<div class="min-h-screen flex items-center justify-center bg-gray-50 px-4">
+  <div class="w-full max-w-md bg-white p-8 rounded shadow">
+    <h2 class="text-2xl font-bold text-center mb-6">Shipping Address</h2>
+
+    <!-- No action="" attribute means the form submits back to this same URL,
+         which is handled by the add_address view -->
+    <form method="POST" class="space-y-4">
+      {% csrf_token %}
+      <!-- Errors that belong to the whole form rather than one field
+           (e.g. two fields that contradict each other) -->
+      {{ form.non_field_errors }}
+      <!-- Loop through every field of AddressForm so we don't have to
+           write the HTML for each input by hand -->
+      {% for field in form %}
+      <div>
+        <!-- for=... links the label to its input, so clicking the label
+             focuses the field (and screen readers announce it) -->
+        <label
+          for="{{ field.id_for_label }}"
+          class="block text-sm font-medium text-gray-700"
+          >{{ field.label }}</label
+        >
+        <!-- The input itself: Django renders it with the placeholder and
+             Tailwind classes defined in AddressForm -->
+        {{ field }}
+        <!-- Small grey hint under the input, only if the field has one -->
+        {% if field.help_text %}
+        <p class="text-xs text-gray-500">{{ field.help_text }}</p>
+        {% endif %}
+        <!-- Validation messages for THIS field, shown in red under it,
+             e.g. "Enter a valid Kenyan phone number" -->
+        {% for error in field.errors %}
+        <p class="text-sm text-red-500">{{ error }}</p>
+        {% endfor %}
+      </div>
+      {% endfor %}
+
+      <button
+        type="submit"
+        class="w-full bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600"
+      >
+        Save Address
+      </button>
+    </form>
+  </div>
+</div>
+{% endblock %}

@@ -1,3 +1,92 @@
+from django.contrib.auth.models import User
+from django.core import mail
+from django.core.mail.backends.base import BaseEmailBackend
 from django.test import TestCase
+from django.test import override_settings
+from django.urls import reverse
+from django.utils.encoding import force_bytes
+from django.utils.http import urlsafe_base64_encode
 
-# Create your tests here.
+from .token import account_activation_token
+
+
+class FailingEmailBackend(BaseEmailBackend):
+    """A fake email backend that behaves like Gmail being unreachable."""
+    def send_messages(self, email_messages):
+        raise OSError("SMTP server is down")
+
+
+class RegistrationEmailTests(TestCase):
+    def valid_form_data(self):
+        return {
+            'username': 'wanjiku',
+            'email': 'wanjiku@example.com',
+            'password1': 'a-strong-pass-123',
+            'password2': 'a-strong-pass-123',
+        }
+
+    def test_registration_creates_inactive_user_and_sends_email(self):
+        response = self.client.post(reverse('register'), self.valid_form_data())
+        self.assertRedirects(response, reverse('email-verification-sent'))
+        user = User.objects.get(username='wanjiku')
+        self.assertFalse(user.is_active)
+        self.assertEqual(len(mail.outbox), 1)
+
+    @override_settings(EMAIL_BACKEND='users.tests.FailingEmailBackend')
+    def test_registration_survives_email_failure(self):
+        response = self.client.post(reverse('register'), self.valid_form_data())
+        # no crash - the form page is shown again with an error message
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, 'could not send the verification email')
+        # and the half-created account was rolled back
+        self.assertFalse(User.objects.filter(username='wanjiku').exists())
+
+
+class EmailVerificationTests(TestCase):
+    def make_inactive_user(self):
+        return User.objects.create_user(
+            username='wanjiku', email='wanjiku@example.com',
+            password='a-strong-pass-123', is_active=False,
+        )
+
+    def test_valid_link_activates_the_account(self):
+        user = self.make_inactive_user()
+        uid = urlsafe_base64_encode(force_bytes(user.pk))
+        token = account_activation_token.make_token(user)
+        response = self.client.get(reverse('email-verification', args=[uid, token]))
+        self.assertRedirects(response, reverse('email-verification-success'))
+        user.refresh_from_db()
+        self.assertTrue(user.is_active)
+
+    def test_garbage_uidb64_shows_failed_page_instead_of_crashing(self):
+        response = self.client.get(reverse('email-verification', args=['not-base64!!', 'sometoken']))
+        self.assertRedirects(response, reverse('email-verification-failed'))
+
+    def test_nonexistent_user_id_shows_failed_page(self):
+        uid = urlsafe_base64_encode(force_bytes(999))
+        response = self.client.get(reverse('email-verification', args=[uid, 'sometoken']))
+        self.assertRedirects(response, reverse('email-verification-failed'))
+
+    def test_link_stops_working_after_activation(self):
+        user = self.make_inactive_user()
+        uid = urlsafe_base64_encode(force_bytes(user.pk))
+        token = account_activation_token.make_token(user)
+        self.client.get(reverse('email-verification', args=[uid, token]))   # first click activates
+        response = self.client.get(reverse('email-verification', args=[uid, token]))  # second click
+        self.assertRedirects(response, reverse('email-verification-failed'))
+
+
+class ProfileTests(TestCase):
+    def setUp(self):
+        User.objects.create_user('wanjiku', 'wanjiku@example.com', 'a-strong-pass-123')
+        self.client.login(username='wanjiku', password='a-strong-pass-123')
+
+    def test_invalid_update_shows_the_error(self):
+        response = self.client.post(reverse('profile'), {'username': '', 'email': 'w@example.com'})
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, 'This field is required')
+
+    def test_valid_update_changes_the_username(self):
+        response = self.client.post(reverse('profile'), {'username': 'wanjiku2', 'email': 'w@example.com'})
+        self.assertRedirects(response, reverse('index'))
+        self.assertTrue(User.objects.filter(username='wanjiku2').exists())

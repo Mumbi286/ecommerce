@@ -43,7 +43,9 @@ class Cart():
 
 # allows us to add items to add in the cart
     def add(self,product,product_qty):
-        product_id = product.id
+        # sessions are saved as JSON, which only allows string keys - so the
+        # cart uses string keys from the start, matching delete/update/iter
+        product_id = str(product.id)
         # checking if the product exists 
         if product_id in self.cart:
             # using a two dimensional data structure
@@ -59,6 +61,11 @@ class Cart():
         if product_id in self.cart:
             del self.cart[product_id]
         self.session.modified=True # makes sure the cart stored into the session is updated
+
+    def clear(self):
+        # empties the whole cart, e.g. right after an order is placed
+        self.cart.clear()
+        self.session.modified=True
 
     def update(self,product,qty):
         product_id = str(product)
