@@ -1,5 +1,6 @@
 from django.shortcuts import render,redirect
 from django.contrib.auth.decorators import login_required
+from django.db import transaction
 from .forms import AddressForm
 from .models import Address,Order,OrderItem,ADDRESS_SNAPSHOT_FIELDS
 from cart.cart import Cart
@@ -59,10 +60,12 @@ def place_order(request):
 
         # freeze the address onto the order (see ADDRESS_SNAPSHOT_FIELDS)
         snapshot = {field: getattr(address, field) for field in ADDRESS_SNAPSHOT_FIELDS}
-        # login_required guarantees a user, so every order is linked to one
-        order = Order.objects.create(user=request.user,total_amount=total_amount,**snapshot)
-        for item in cart:
-            OrderItem.objects.create(order=order,product=item['product'],quantity=item['qty'])
+        # login_required guarantees a user, so every order is linked to one;
+        # atomic: an order must never exist with half its items (API matches)
+        with transaction.atomic():
+            order = Order.objects.create(user=request.user,total_amount=total_amount,**snapshot)
+            for item in cart:
+                OrderItem.objects.create(order=order,product=item['product'],quantity=item['qty'])
         # the items are now in the order, so the cart starts fresh
         cart.clear()
         order_success= True

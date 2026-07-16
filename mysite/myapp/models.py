@@ -20,6 +20,8 @@ class Product(models.Model):
     slug = models.SlugField(unique=True,blank=True)
     stock = models.IntegerField()
     active = models.BooleanField()
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
 
 
     def save(self,*args,**kwargs):

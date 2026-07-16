@@ -1,12 +1,13 @@
 from decimal import Decimal
 
 from django.contrib.auth.models import User
+from django.db.models import ProtectedError
 from django.test import Client, TestCase
 from django.urls import reverse
 
 from myapp.models import Product
 from .forms import AddressForm
-from .models import Address, Order
+from .models import Address, Order, OrderItem
 
 
 def make_product(name='Ceramic Mug'):
@@ -274,3 +275,13 @@ class OrderAPITests(TestCase):
         client.login(username='wanjiku', password='a-strong-pass-123')
         response = client.post('/api/orders/')
         self.assertEqual(response.status_code, 403)
+
+
+class OrderHistoryProtectionTests(TestCase):
+    def test_deleting_an_ordered_product_is_refused(self):
+        user = User.objects.create_user('wanjiku', 'w@example.com', 'a-strong-pass-123')
+        product = make_product()
+        order = Order.objects.create(user=user, total_amount=350)
+        OrderItem.objects.create(order=order, product=product, quantity=1)
+        with self.assertRaises(ProtectedError):
+            product.delete()
