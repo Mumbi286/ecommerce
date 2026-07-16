@@ -48,7 +48,7 @@ class CartAPIView(APIView):
         if product_id is None or qty is None:
             return Response({'error': 'Invalid product or quantity'},
                             status=status.HTTP_400_BAD_REQUEST)
-        product = get_object_or_404(Product, id=product_id)
+        product = get_object_or_404(Product, id=product_id, active=True)
         cart = Cart(request)
         cart.add(product=product, product_qty=qty)
         return Response(cart_payload(cart), status=status.HTTP_201_CREATED)
