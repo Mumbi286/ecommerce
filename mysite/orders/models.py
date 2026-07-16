@@ -42,7 +42,7 @@ class Address(models.Model):
     phone = models.CharField(max_length=13,validators=[kenyan_phone_validator])
     # optional second number in case the main one is unreachable
     phone_alt = models.CharField(max_length=13,blank=True,default="",validators=[kenyan_phone_validator])
-    # estate / building / street / house number — what the courier reads
+    # estate / building / street / house number - what the courier reads
     delivery_details = models.CharField(max_length=255)
     city = models.CharField(max_length=100,validators=[city_validator])
     county = models.CharField(max_length=30,choices=COUNTY_CHOICES)
