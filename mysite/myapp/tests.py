@@ -96,3 +96,20 @@ class ProductAPITests(TestCase):
         self.assertEqual(data['count'], 13)
         self.assertEqual(len(data['results']), 12)   # page 1 is full
         self.assertIsNotNone(data['next'])           # and page 2 exists
+
+
+class ApiErrorFormatTests(TestCase):
+    def test_unknown_api_url_returns_json_404_not_html(self):
+        response = self.client.get('/api/no-such-endpoint/')
+        self.assertEqual(response.status_code, 404)
+        self.assertEqual(response.json(), {'error': 'Not found'})
+
+
+class ApiDocsTests(TestCase):
+    def test_schema_is_served(self):
+        response = self.client.get('/api/schema/')
+        self.assertEqual(response.status_code, 200)
+
+    def test_docs_page_is_served(self):
+        response = self.client.get('/api/docs/')
+        self.assertEqual(response.status_code, 200)

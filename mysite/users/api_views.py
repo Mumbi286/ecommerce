@@ -29,6 +29,8 @@ class CsrfCookieAPIView(APIView):
 
 @method_decorator(csrf_protect, name='dispatch')
 class RegisterAPIView(APIView):
+    throttle_scope = 'register'
+
     def post(self, request):
         # the SAME form as the HTML page - identical validation rules
         # (password strength, unique username) on both doors
@@ -53,6 +55,8 @@ class RegisterAPIView(APIView):
 
 @method_decorator(csrf_protect, name='dispatch')
 class VerifyEmailAPIView(APIView):
+    throttle_scope = 'verify-email'
+
     def post(self, request):
         try:
             uid = force_str(urlsafe_base64_decode(request.data.get('uid', '')))
@@ -71,6 +75,8 @@ class VerifyEmailAPIView(APIView):
 
 @method_decorator(csrf_protect, name='dispatch')
 class LoginAPIView(APIView):
+    throttle_scope = 'login'
+
     def post(self, request):
         user = authenticate(request,
                             username=request.data.get('username'),

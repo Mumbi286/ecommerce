@@ -1,5 +1,6 @@
 from django.contrib.auth.models import User
 from django.core import mail
+from django.core.cache import cache
 from django.core.mail.backends.base import BaseEmailBackend
 from django.test import Client, TestCase
 from django.test import override_settings
@@ -181,3 +182,23 @@ class AuthAPITests(TestCase):
         response = client.post('/api/auth/login/', {
             'username': 'wanjiku', 'password': 'a-strong-pass-123'})
         self.assertEqual(response.status_code, 403)
+
+
+class LoginThrottleTests(TestCase):
+    # throttle counters live in the cache - clear before AND after so
+    # this test neither inherits nor leaks request counts
+    def setUp(self):
+        cache.clear()
+
+    def tearDown(self):
+        cache.clear()
+
+    def test_eleventh_rapid_login_attempt_is_throttled(self):
+        for _ in range(10):
+            response = self.client.post('/api/auth/login/', {
+                'username': 'ghost', 'password': 'wrong'})
+            self.assertEqual(response.status_code, 400)
+        response = self.client.post('/api/auth/login/', {
+            'username': 'ghost', 'password': 'wrong'})
+        self.assertEqual(response.status_code, 429)
+        self.assertIn('error', response.json())

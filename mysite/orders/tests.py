@@ -227,7 +227,7 @@ class OrderAPITests(TestCase):
     def test_anonymous_user_gets_json_403_not_a_redirect(self):
         response = self.client.get('/api/orders/')
         self.assertEqual(response.status_code, 403)
-        self.assertIn('detail', response.json())
+        self.assertIn('error', response.json())
 
     def test_post_creates_the_order_and_returns_it(self):
         self.login()

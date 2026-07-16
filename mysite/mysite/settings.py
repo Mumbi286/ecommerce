@@ -44,6 +44,7 @@ INSTALLED_APPS = [
     'orders',
     'rest_framework',
     'corsheaders',
+    'drf_spectacular',
     'django.contrib.admin',
     'django.contrib.auth',
     'django.contrib.contenttypes',
@@ -199,4 +200,24 @@ REST_FRAMEWORK = {
     # fills the product grid (4 columns x 3 rows) exactly
     'DEFAULT_PAGINATION_CLASS': 'rest_framework.pagination.PageNumberPagination',
     'PAGE_SIZE': 12,
+    # one error shape everywhere: {'error': ...} (see mysite/api.py)
+    'EXCEPTION_HANDLER': 'mysite.api.api_exception_handler',
+    # brute-force protection: only views that declare a throttle_scope
+    # are throttled (login, register, verify-email), per IP
+    'DEFAULT_THROTTLE_CLASSES': ['rest_framework.throttling.ScopedRateThrottle'],
+    'DEFAULT_THROTTLE_RATES': {
+        'login': '10/min',
+        'register': '10/min',
+        'verify-email': '10/min',
+    },
+    # drf-spectacular generates the OpenAPI schema behind /api/docs/
+    'DEFAULT_SCHEMA_CLASS': 'drf_spectacular.openapi.AutoSchema',
+}
+
+SPECTACULAR_SETTINGS = {
+    'TITLE': 'Shop API',
+    'DESCRIPTION': 'JSON API for the Shop e-commerce platform: '
+                   'products, session cart, orders, and session-cookie auth.',
+    'VERSION': '1.0.0',
+    'SERVE_INCLUDE_SCHEMA': False,
 }

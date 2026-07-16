@@ -18,6 +18,26 @@ from django.contrib import admin
 from django.urls import path,include
 from django.conf.urls.static import static
 from django.conf import settings
+from django.http import JsonResponse
+from django.views.defaults import page_not_found, server_error
+from drf_spectacular.views import SpectacularAPIView, SpectacularSwaggerView
+
+
+def custom_404(request, exception):
+    # API callers get JSON errors, never an HTML error page
+    if request.path.startswith('/api/'):
+        return JsonResponse({'error': 'Not found'}, status=404)
+    return page_not_found(request, exception)
+
+
+def custom_500(request):
+    if request.path.startswith('/api/'):
+        return JsonResponse({'error': 'Server error'}, status=500)
+    return server_error(request)
+
+
+handler404 = custom_404
+handler500 = custom_500
 
 urlpatterns = [
     path('admin/', admin.site.urls),
@@ -30,6 +50,8 @@ urlpatterns = [
     path('api/cart/', include('cart.api_urls')),
     path('api/orders/', include('orders.api_urls')),
     path('api/auth/', include('users.api_urls')),
+    path('api/schema/', SpectacularAPIView.as_view(), name='api-schema'),
+    path('api/docs/', SpectacularSwaggerView.as_view(url_name='api-schema'), name='api-docs'),
 
 ]
 urlpatterns+= static(settings.MEDIA_URL,document_root= settings.MEDIA_ROOT)

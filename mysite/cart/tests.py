@@ -136,7 +136,7 @@ class CartAPITests(TestCase):
     def test_add_unknown_product_returns_json_404(self):
         response = self.client.post('/api/cart/', {'product_id': 99999, 'qty': 1})
         self.assertEqual(response.status_code, 404)
-        self.assertIn('detail', response.json())            # JSON, not an HTML page
+        self.assertIn('error', response.json())             # JSON, not an HTML page
 
     def test_adding_an_inactive_product_is_refused_with_404(self):
         inactive = make_product('Retired Kettle', active=False)
