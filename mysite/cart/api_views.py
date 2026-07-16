@@ -37,10 +37,16 @@ def cart_payload(cart):
 # that fills someone's cart is exactly what CSRF is - so we protect all of it.
 @method_decorator(csrf_protect, name='dispatch')
 class CartAPIView(APIView):
-    """GET /api/cart/ reads the cart, POST /api/cart/ adds an item."""
+    """GET /api/cart/ reads the cart, POST /api/cart/ adds an item,
+    DELETE /api/cart/ empties it (the frontend's Clear Cart button)."""
 
     def get(self, request):
         return Response(cart_payload(Cart(request)))
+
+    def delete(self, request):
+        cart = Cart(request)
+        cart.clear()
+        return Response(cart_payload(cart))
 
     def post(self, request):
         product_id = parse_positive_int(request.data.get('product_id'))

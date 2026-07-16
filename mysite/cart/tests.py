@@ -168,3 +168,17 @@ class CartAPITests(TestCase):
         response = client.post('/api/cart/', {
             'product_id': self.product.id, 'qty': 1})
         self.assertEqual(response.status_code, 403)
+
+    def test_delete_on_the_collection_clears_the_whole_cart(self):
+        self.api_add(qty=2)
+        other = make_product('Second Item')
+        self.client.post('/api/cart/', {'product_id': other.id, 'qty': 1})
+        response = self.client.delete('/api/cart/')
+        self.assertEqual(response.json(), {
+            'items': [], 'total_qty': 0, 'total_price': '0'})
+        self.assertEqual(self.client.session['cart'], {})
+
+    def test_clear_without_csrf_token_is_rejected(self):
+        client = Client(enforce_csrf_checks=True)
+        response = client.delete('/api/cart/')
+        self.assertEqual(response.status_code, 403)
