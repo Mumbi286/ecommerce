@@ -1,0 +1,72 @@
+[
+  {
+    "model": "myapp.product",
+    "fields": {
+      "name": "Wireless Headphones",
+      "slug": "wireless-headphones",
+      "price": "7999.00",
+      "description": "Noise-cancelling headphones with deep bass and Bluetooth 5.0 support.",
+      "image": "images/product-1.png",
+      "stock": 25,
+      "active": true,
+      "created_at": "2026-07-16T09:00:00Z",
+      "updated_at": "2026-07-16T09:00:00Z"
+    }
+  },
+  {
+    "model": "myapp.product",
+    "fields": {
+      "name": "Bluetooth Speaker",
+      "slug": "bluetooth-speaker",
+      "price": "4999.00",
+      "description": "Portable speaker with crisp sound and 12-hour battery life.",
+      "image": "images/product-2.png",
+      "stock": 40,
+      "active": true,
+      "created_at": "2026-07-16T09:00:00Z",
+      "updated_at": "2026-07-16T09:00:00Z"
+    }
+  },
+  {
+    "model": "myapp.product",
+    "fields": {
+      "name": "Smartwatch",
+      "slug": "smartwatch",
+      "price": "12999.00",
+      "description": "Track fitness, receive notifications, and monitor your health stats.",
+      "image": "images/product-3.png",
+      "stock": 15,
+      "active": true,
+      "created_at": "2026-07-16T09:00:00Z",
+      "updated_at": "2026-07-16T09:00:00Z"
+    }
+  },
+  {
+    "model": "myapp.product",
+    "fields": {
+      "name": "Gaming Mouse",
+      "slug": "gaming-mouse",
+      "price": "3499.00",
+      "description": "Ergonomic mouse with customizable RGB lighting and 6 DPI levels.",
+      "image": "images/product-4.png",
+      "stock": 50,
+      "active": true,
+      "created_at": "2026-07-16T09:00:00Z",
+      "updated_at": "2026-07-16T09:00:00Z"
+    }
+  },
+  {
+    "model": "myapp.product",
+    "fields": {
+      "name": "USB-C Hub",
+      "slug": "usb-c-hub",
+      "price": "2999.00",
+      "description": "Multiport adapter with HDMI, USB 3.0, and SD card support.",
+      "image": "images/product-6.png",
+      "stock": 100,
+      "active": true,
+      "created_at": "2026-07-16T09:00:00Z",
+      "updated_at": "2026-07-16T09:00:00Z"
+    }
+  }
+]
