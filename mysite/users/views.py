@@ -1,12 +1,11 @@
 from django.shortcuts import render,redirect
-from django.contrib.sites.shortcuts import get_current_site
-from django.utils.http import urlsafe_base64_decode,urlsafe_base64_encode
+from django.utils.http import urlsafe_base64_decode
 from django.http import HttpResponse
 from .forms import CreateUserForm
-from django.utils.encoding import force_bytes,force_str
-from django.template.loader import render_to_string
+from django.utils.encoding import force_str
 from django.contrib.auth.models import User
 from .token import account_activation_token
+from .emails import send_verification_email
 from .forms import LoginForm
 from .forms import UserUpdateForm
 from django.contrib.auth import authenticate,login,logout
@@ -23,20 +22,9 @@ def register(request):
             user = form.save()
             user.is_active = False
             user.save()
-            current_site= get_current_site(request)
-
-
-            # Email verification logic
-            subject = 'Verify your email to activate your account'
-            message = render_to_string('users/email-verification.html',{
-                'user':user,
-                'domain': current_site.domain,
-                'uid': urlsafe_base64_encode(force_bytes(user.pk)),
-                'token': account_activation_token.make_token(user),
-            })
-            # sending the email to the user
+            # the email logic lives in users/emails.py, shared with the API
             try:
-                user.email_user(subject=subject,message=message)
+                send_verification_email(request, user)
             except OSError:
                 # email could not be sent (SMTP down, bad credentials, no
                 # network). Delete the half-created account so the username

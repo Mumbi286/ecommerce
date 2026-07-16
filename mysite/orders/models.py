@@ -42,13 +42,15 @@ class Address(models.Model):
     phone = models.CharField(max_length=13,validators=[kenyan_phone_validator])
     # optional second number in case the main one is unreachable
     phone_alt = models.CharField(max_length=13,blank=True,default="",validators=[kenyan_phone_validator])
-    # estate / building / street / house number — what the courier reads
+    # estate / building / street / house number - what the courier reads
     delivery_details = models.CharField(max_length=255)
     city = models.CharField(max_length=100,validators=[city_validator])
     county = models.CharField(max_length=30,choices=COUNTY_CHOICES)
     postal_code = models.CharField(max_length=5,validators=[postal_code_validator])
     # deliveries are Kenya-only, so this is fixed and not shown on the form
     country = models.CharField(max_length=100,default="Kenya",editable=False)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
 
 # copied onto each Order at purchase time - one list, so the model
 # fields and the snapshot logic in place_order can never drift apart
@@ -65,6 +67,7 @@ class Order(models.Model):
     total_amount = models.DecimalField(max_digits=10,decimal_places=2,default=0)
     is_paid = models.BooleanField(default=False)
     created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
 
     # frozen copy of the delivery address at purchase time - editing or
     # deleting the user's Address must never rewrite order history
@@ -82,8 +85,11 @@ class Order(models.Model):
 # information on the items that the user has ordered
 class OrderItem(models.Model):
     order = models.ForeignKey(Order,on_delete=models.CASCADE,related_name="items")
-    product = models.ForeignKey(Product,on_delete=models.CASCADE)
+    # PROTECT: deleting a product that appears in any order is refused -
+    # order history is sacred. Retire products with active=False instead.
+    product = models.ForeignKey(Product,on_delete=models.PROTECT)
     quantity = models.PositiveIntegerField(default=1)
+    created_at = models.DateTimeField(auto_now_add=True)
 
     # a derived field that the user should always have the total with them
     @property

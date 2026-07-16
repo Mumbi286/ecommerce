@@ -6,10 +6,10 @@ from django.urls import reverse
 from .models import Product
 
 
-def make_product(name='Ceramic Mug'):
+def make_product(name='Ceramic Mug', active=True):
     return Product.objects.create(
         name=name, price=350, description='A test product',
-        image='images/test.jpg', stock=10, active=True,
+        image='images/test.jpg', stock=10, active=active,
     )
 
 
@@ -47,6 +47,16 @@ class ProductPageTests(TestCase):
         response = self.client.get('/no-such-product')
         self.assertEqual(response.status_code, 404)
 
+    def test_inactive_product_is_hidden_from_the_home_page(self):
+        make_product('Retired Kettle', active=False)
+        response = self.client.get(reverse('index'))
+        self.assertNotContains(response, 'Retired Kettle')
+
+    def test_inactive_product_detail_page_is_a_404(self):
+        product = make_product('Retired Kettle', active=False)
+        response = self.client.get(product.get_absolute_url())
+        self.assertEqual(response.status_code, 404)
+
 
 class ProductAPITests(TestCase):
     def test_list_returns_paginated_products(self):
@@ -67,6 +77,18 @@ class ProductAPITests(TestCase):
         response = self.client.get('/api/products/no-such-product/')
         self.assertEqual(response.status_code, 404)
 
+    def test_inactive_product_is_excluded_from_the_api_list(self):
+        make_product('Visible Mug')
+        make_product('Retired Kettle', active=False)
+        data = self.client.get('/api/products/').json()
+        self.assertEqual(data['count'], 1)
+        self.assertEqual(data['results'][0]['name'], 'Visible Mug')
+
+    def test_inactive_product_api_detail_is_a_404(self):
+        product = make_product('Retired Kettle', active=False)
+        response = self.client.get(f'/api/products/{product.slug}/')
+        self.assertEqual(response.status_code, 404)
+
     def test_list_is_paginated_at_twelve(self):
         for i in range(13):
             make_product(f'Product {i}')
@@ -74,3 +96,20 @@ class ProductAPITests(TestCase):
         self.assertEqual(data['count'], 13)
         self.assertEqual(len(data['results']), 12)   # page 1 is full
         self.assertIsNotNone(data['next'])           # and page 2 exists
+
+
+class ApiErrorFormatTests(TestCase):
+    def test_unknown_api_url_returns_json_404_not_html(self):
+        response = self.client.get('/api/no-such-endpoint/')
+        self.assertEqual(response.status_code, 404)
+        self.assertEqual(response.json(), {'error': 'Not found'})
+
+
+class ApiDocsTests(TestCase):
+    def test_schema_is_served(self):
+        response = self.client.get('/api/schema/')
+        self.assertEqual(response.status_code, 200)
+
+    def test_docs_page_is_served(self):
+        response = self.client.get('/api/docs/')
+        self.assertEqual(response.status_code, 200)

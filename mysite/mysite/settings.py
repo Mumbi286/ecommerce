@@ -44,6 +44,7 @@ INSTALLED_APPS = [
     'orders',
     'rest_framework',
     'corsheaders',
+    'drf_spectacular',
     'django.contrib.admin',
     'django.contrib.auth',
     'django.contrib.contenttypes',
@@ -90,12 +91,26 @@ WSGI_APPLICATION = 'mysite.wsgi.application'
 # Database
 # https://docs.djangoproject.com/en/4.2/ref/settings/#databases
 
-DATABASES = {
-    'default': {
-        'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': BASE_DIR / 'db.sqlite3',
+# PostgreSQL when credentials exist in .env (the normal case - dev matches
+# production); falls back to SQLite so a fresh clone still runs with zero setup.
+if os.environ.get('DB_NAME'):
+    DATABASES = {
+        'default': {
+            'ENGINE': 'django.db.backends.postgresql',
+            'NAME': os.environ.get('DB_NAME'),
+            'USER': os.environ.get('DB_USER'),
+            'PASSWORD': os.environ.get('DB_PASSWORD'),
+            'HOST': os.environ.get('DB_HOST', 'localhost'),
+            'PORT': os.environ.get('DB_PORT', '5432'),
+        }
     }
-}
+else:
+    DATABASES = {
+        'default': {
+            'ENGINE': 'django.db.backends.sqlite3',
+            'NAME': BASE_DIR / 'db.sqlite3',
+        }
+    }
 
 
 # Password validation
@@ -122,7 +137,9 @@ AUTH_PASSWORD_VALIDATORS = [
 
 LANGUAGE_CODE = 'en-us'
 
-TIME_ZONE = 'UTC'
+# Kenya-first store: timestamps display in East Africa Time. Storage
+# stays UTC because USE_TZ = True - only presentation changes.
+TIME_ZONE = 'Africa/Nairobi'
 
 USE_I18N = True
 
@@ -145,9 +162,9 @@ MEDIA_URL = '/media/'
 # where @login_required sends visitors who are not logged in
 LOGIN_URL = 'login'
 
-# sessions (cart + login) end when the browser is closed, so every
-# fresh visit starts with a clean cart
-SESSION_EXPIRE_AT_BROWSER_CLOSE = True
+# sessions last 2 weeks: login AND cart survive browser restarts -
+# persistent carts are an e-commerce conversion feature, not a bug
+SESSION_COOKIE_AGE = 60 * 60 * 24 * 14
 
 # Email credentials come from environment variables so they are never
 # committed to git. Set EMAIL_HOST_USER and EMAIL_HOST_PASSWORD (a Gmail
@@ -183,4 +200,24 @@ REST_FRAMEWORK = {
     # fills the product grid (4 columns x 3 rows) exactly
     'DEFAULT_PAGINATION_CLASS': 'rest_framework.pagination.PageNumberPagination',
     'PAGE_SIZE': 12,
+    # one error shape everywhere: {'error': ...} (see mysite/api.py)
+    'EXCEPTION_HANDLER': 'mysite.api.api_exception_handler',
+    # brute-force protection: only views that declare a throttle_scope
+    # are throttled (login, register, verify-email), per IP
+    'DEFAULT_THROTTLE_CLASSES': ['rest_framework.throttling.ScopedRateThrottle'],
+    'DEFAULT_THROTTLE_RATES': {
+        'login': '10/min',
+        'register': '10/min',
+        'verify-email': '10/min',
+    },
+    # drf-spectacular generates the OpenAPI schema behind /api/docs/
+    'DEFAULT_SCHEMA_CLASS': 'drf_spectacular.openapi.AutoSchema',
+}
+
+SPECTACULAR_SETTINGS = {
+    'TITLE': 'Shop API',
+    'DESCRIPTION': 'JSON API for the Shop e-commerce platform: '
+                   'products, session cart, orders, and session-cookie auth.',
+    'VERSION': '1.0.0',
+    'SERVE_INCLUDE_SCHEMA': False,
 }

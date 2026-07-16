@@ -5,4 +5,6 @@ from .models import Product
 class ProductSerializer(serializers.ModelSerializer):
     class Meta:
         model = Product
-        fields = ['id', 'name', 'price', 'description', 'image', 'slug', 'stock', 'active']
+        # 'active' is not exposed: the API only ever serves active products,
+        # so the field would be a constant 'true' on every response
+        fields = ['id', 'name', 'price', 'description', 'image', 'slug', 'stock']

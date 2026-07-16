@@ -22,7 +22,7 @@ def cart_add(request):
     quantity = parse_positive_int(request.POST.get("product_quantity"))
     if product_id is None or quantity is None:
         return JsonResponse({'error': 'Invalid product or quantity'}, status=400)
-    product = get_object_or_404(Product, id=product_id)
+    product = get_object_or_404(Product, id=product_id, active=True)
     cart = Cart(request)
     cart.add(product=product, product_qty=quantity)
     return JsonResponse({'qty': len(cart)})

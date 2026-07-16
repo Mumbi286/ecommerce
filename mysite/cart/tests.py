@@ -12,10 +12,10 @@ class FakeRequest:
         self.session = session
 
 
-def make_product(name='Ceramic Mug'):
+def make_product(name='Ceramic Mug', active=True):
     return Product.objects.create(
         name=name, price=350, description='A test product',
-        image='images/test.jpg', stock=10, active=True,
+        image='images/test.jpg', stock=10, active=active,
     )
 
 
@@ -81,6 +81,12 @@ class CartViewTests(TestCase):
             'product_id': 99999, 'product_quantity': 1})
         self.assertEqual(response.status_code, 404)
 
+    def test_adding_an_inactive_product_is_refused_with_404(self):
+        inactive = make_product('Retired Kettle', active=False)
+        response = self.client.post(reverse('cart_add'), {
+            'product_id': inactive.id, 'product_quantity': 1})
+        self.assertEqual(response.status_code, 404)
+
 
 class CsrfProtectionTests(TestCase):
     def test_cart_add_without_csrf_token_is_rejected(self):
@@ -130,7 +136,13 @@ class CartAPITests(TestCase):
     def test_add_unknown_product_returns_json_404(self):
         response = self.client.post('/api/cart/', {'product_id': 99999, 'qty': 1})
         self.assertEqual(response.status_code, 404)
-        self.assertIn('detail', response.json())            # JSON, not an HTML page
+        self.assertIn('error', response.json())             # JSON, not an HTML page
+
+    def test_adding_an_inactive_product_is_refused_with_404(self):
+        inactive = make_product('Retired Kettle', active=False)
+        response = self.client.post('/api/cart/', {
+            'product_id': inactive.id, 'qty': 1})
+        self.assertEqual(response.status_code, 404)
 
     def test_patch_changes_the_quantity(self):
         self.api_add(qty=1)
@@ -155,4 +167,18 @@ class CartAPITests(TestCase):
         client = Client(enforce_csrf_checks=True)
         response = client.post('/api/cart/', {
             'product_id': self.product.id, 'qty': 1})
+        self.assertEqual(response.status_code, 403)
+
+    def test_delete_on_the_collection_clears_the_whole_cart(self):
+        self.api_add(qty=2)
+        other = make_product('Second Item')
+        self.client.post('/api/cart/', {'product_id': other.id, 'qty': 1})
+        response = self.client.delete('/api/cart/')
+        self.assertEqual(response.json(), {
+            'items': [], 'total_qty': 0, 'total_price': '0'})
+        self.assertEqual(self.client.session['cart'], {})
+
+    def test_clear_without_csrf_token_is_rejected(self):
+        client = Client(enforce_csrf_checks=True)
+        response = client.delete('/api/cart/')
         self.assertEqual(response.status_code, 403)

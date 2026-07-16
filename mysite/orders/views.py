@@ -1,7 +1,8 @@
 from django.shortcuts import render,redirect
 from django.contrib.auth.decorators import login_required
+from django.db import transaction
 from .forms import AddressForm
-from .models import Address,Order,OrderItem
+from .models import Address,Order,OrderItem,ADDRESS_SNAPSHOT_FIELDS
 from cart.cart import Cart
 from django.http import JsonResponse
 
@@ -50,12 +51,21 @@ def place_order(request):
         # refuse to create an order from an empty cart
         if len(cart) == 0:
             return JsonResponse({'success': False, 'message': 'Your cart is empty'})
+        # no address, no delivery - refuse before creating anything
+        address = Address.objects.filter(user=request.user).first()
+        if address is None:
+            return JsonResponse({'success': False,
+                                 'message': 'Add a delivery address before placing an order'})
         total_amount = cart.get_total_price()
 
-        # login_required guarantees a user, so every order is linked to one
-        order = Order.objects.create(user=request.user,total_amount=total_amount)
-        for item in cart:
-            OrderItem.objects.create(order=order,product=item['product'],quantity=item['qty'])
+        # freeze the address onto the order (see ADDRESS_SNAPSHOT_FIELDS)
+        snapshot = {field: getattr(address, field) for field in ADDRESS_SNAPSHOT_FIELDS}
+        # login_required guarantees a user, so every order is linked to one;
+        # atomic: an order must never exist with half its items (API matches)
+        with transaction.atomic():
+            order = Order.objects.create(user=request.user,total_amount=total_amount,**snapshot)
+            for item in cart:
+                OrderItem.objects.create(order=order,product=item['product'],quantity=item['qty'])
         # the items are now in the order, so the cart starts fresh
         cart.clear()
         order_success= True

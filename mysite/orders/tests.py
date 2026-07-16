@@ -1,12 +1,13 @@
 from decimal import Decimal
 
 from django.contrib.auth.models import User
+from django.db.models import ProtectedError
 from django.test import Client, TestCase
 from django.urls import reverse
 
 from myapp.models import Product
 from .forms import AddressForm
-from .models import Address, Order
+from .models import Address, Order, OrderItem
 
 
 def make_product(name='Ceramic Mug'):
@@ -202,3 +203,85 @@ class CsrfProtectionTests(TestCase):
         client = Client(enforce_csrf_checks=True)
         response = client.post(reverse('place-order'))
         self.assertEqual(response.status_code, 403)
+
+
+class OrderAPITests(TestCase):
+    def setUp(self):
+        self.user = User.objects.create_user(
+            'wanjiku', 'wanjiku@example.com', 'a-strong-pass-123')
+        self.product = make_product()
+
+    def login(self):
+        self.client.login(username='wanjiku', password='a-strong-pass-123')
+
+    def save_address(self):
+        return Address.objects.create(
+            user=self.user, full_name='Jane Wanjiku', phone='+254712345678',
+            delivery_details='Greenhouse Apartments, Ngong Road',
+            city='Nairobi', county='Nairobi', postal_code='00100')
+
+    def fill_cart(self, qty=2):
+        self.client.post(reverse('cart_add'), {
+            'product_id': self.product.id, 'product_quantity': qty})
+
+    def test_anonymous_user_gets_json_403_not_a_redirect(self):
+        response = self.client.get('/api/orders/')
+        self.assertEqual(response.status_code, 403)
+        self.assertIn('error', response.json())
+
+    def test_post_creates_the_order_and_returns_it(self):
+        self.login()
+        self.save_address()
+        self.fill_cart(qty=2)
+        response = self.client.post('/api/orders/')
+        self.assertEqual(response.status_code, 201)
+        data = response.json()
+        self.assertEqual(data['total_amount'], '700.00')
+        self.assertEqual(data['county'], 'Nairobi')          # frozen snapshot
+        item = data['items'][0]
+        self.assertEqual(item['name'], self.product.name)
+        self.assertEqual(item['quantity'], 2)
+        self.assertEqual(item['line_total'], '700.00')
+        self.assertEqual(self.client.session['cart'], {})    # cart cleared
+
+    def test_post_with_an_empty_cart_is_refused(self):
+        self.login()
+        self.save_address()
+        response = self.client.post('/api/orders/')
+        self.assertEqual(response.status_code, 400)
+        self.assertEqual(Order.objects.count(), 0)
+
+    def test_post_without_an_address_is_refused(self):
+        self.login()
+        self.fill_cart(qty=2)
+        response = self.client.post('/api/orders/')
+        self.assertEqual(response.status_code, 400)
+        self.assertIn('address', response.json()['error'])
+
+    def test_history_is_paginated_and_only_shows_your_own_orders(self):
+        other = User.objects.create_user('otieno', 'o@example.com', 'pass-456-strong')
+        Order.objects.create(user=other, total_amount=100)
+        self.login()
+        self.save_address()
+        self.fill_cart(qty=2)
+        self.client.post('/api/orders/')
+        data = self.client.get('/api/orders/').json()
+        self.assertEqual(data['count'], 1)                   # not the other user's
+        self.assertEqual(data['results'][0]['total_amount'], '700.00')
+
+    def test_post_without_csrf_token_is_rejected(self):
+        # DRF enforces CSRF for session-authenticated users - prove it
+        client = Client(enforce_csrf_checks=True)
+        client.login(username='wanjiku', password='a-strong-pass-123')
+        response = client.post('/api/orders/')
+        self.assertEqual(response.status_code, 403)
+
+
+class OrderHistoryProtectionTests(TestCase):
+    def test_deleting_an_ordered_product_is_refused(self):
+        user = User.objects.create_user('wanjiku', 'w@example.com', 'a-strong-pass-123')
+        product = make_product()
+        order = Order.objects.create(user=user, total_amount=350)
+        OrderItem.objects.create(order=order, product=product, quantity=1)
+        with self.assertRaises(ProtectedError):
+            product.delete()
