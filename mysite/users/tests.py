@@ -1,7 +1,7 @@
 from django.contrib.auth.models import User
 from django.core import mail
 from django.core.mail.backends.base import BaseEmailBackend
-from django.test import TestCase
+from django.test import Client, TestCase
 from django.test import override_settings
 from django.urls import reverse
 from django.utils.encoding import force_bytes
@@ -90,3 +90,94 @@ class ProfileTests(TestCase):
         response = self.client.post(reverse('profile'), {'username': 'wanjiku2', 'email': 'w@example.com'})
         self.assertRedirects(response, reverse('index'))
         self.assertTrue(User.objects.filter(username='wanjiku2').exists())
+
+
+class AuthAPITests(TestCase):
+    def register_data(self, **overrides):
+        data = {
+            'username': 'wanjiku',
+            'email': 'wanjiku@example.com',
+            'password1': 'a-strong-pass-123',
+            'password2': 'a-strong-pass-123',
+        }
+        data.update(overrides)
+        return data
+
+    def make_active_user(self):
+        return User.objects.create_user(
+            'wanjiku', 'wanjiku@example.com', 'a-strong-pass-123')
+
+    def test_register_creates_inactive_user_and_sends_email(self):
+        response = self.client.post('/api/auth/register/', self.register_data())
+        self.assertEqual(response.status_code, 201)
+        self.assertEqual(response.json()['username'], 'wanjiku')
+        self.assertFalse(User.objects.get(username='wanjiku').is_active)
+        self.assertEqual(len(mail.outbox), 1)
+
+    def test_register_returns_field_errors_as_json(self):
+        response = self.client.post('/api/auth/register/',
+                                    self.register_data(password2='does-not-match'))
+        self.assertEqual(response.status_code, 400)
+        self.assertIn('password2', response.json()['errors'])
+
+    @override_settings(EMAIL_BACKEND='users.tests.FailingEmailBackend')
+    def test_register_survives_smtp_failure(self):
+        response = self.client.post('/api/auth/register/', self.register_data())
+        self.assertEqual(response.status_code, 503)
+        # the half-created account was rolled back
+        self.assertFalse(User.objects.filter(username='wanjiku').exists())
+
+    def test_verify_email_activates_the_account(self):
+        user = User.objects.create_user(
+            'wanjiku', 'wanjiku@example.com', 'a-strong-pass-123', is_active=False)
+        response = self.client.post('/api/auth/verify-email/', {
+            'uid': urlsafe_base64_encode(force_bytes(user.pk)),
+            'token': account_activation_token.make_token(user)})
+        self.assertEqual(response.status_code, 200)
+        user.refresh_from_db()
+        self.assertTrue(user.is_active)
+
+    def test_verify_email_with_a_bad_token_is_refused(self):
+        user = User.objects.create_user(
+            'wanjiku', 'wanjiku@example.com', 'a-strong-pass-123', is_active=False)
+        response = self.client.post('/api/auth/verify-email/', {
+            'uid': urlsafe_base64_encode(force_bytes(user.pk)),
+            'token': 'garbage-token'})
+        self.assertEqual(response.status_code, 400)
+        user.refresh_from_db()
+        self.assertFalse(user.is_active)
+
+    def test_login_is_refused_before_verification(self):
+        User.objects.create_user(
+            'wanjiku', 'wanjiku@example.com', 'a-strong-pass-123', is_active=False)
+        response = self.client.post('/api/auth/login/', {
+            'username': 'wanjiku', 'password': 'a-strong-pass-123'})
+        self.assertEqual(response.status_code, 400)
+
+    def test_login_works_and_me_returns_the_user(self):
+        self.make_active_user()
+        response = self.client.post('/api/auth/login/', {
+            'username': 'wanjiku', 'password': 'a-strong-pass-123'})
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(self.client.get('/api/auth/me/').json()['username'], 'wanjiku')
+
+    def test_me_requires_login(self):
+        self.assertEqual(self.client.get('/api/auth/me/').status_code, 403)
+
+    def test_logout_kills_the_session(self):
+        self.make_active_user()
+        self.client.post('/api/auth/login/', {
+            'username': 'wanjiku', 'password': 'a-strong-pass-123'})
+        self.client.post('/api/auth/logout/')
+        self.assertEqual(self.client.get('/api/auth/me/').status_code, 403)
+
+    def test_csrf_endpoint_sets_the_cookie(self):
+        response = self.client.get('/api/auth/csrf/')
+        self.assertIn('csrftoken', response.cookies)
+
+    def test_login_without_csrf_token_is_rejected(self):
+        self.make_active_user()
+        client = Client(enforce_csrf_checks=True)
+        response = client.post('/api/auth/login/', {
+            'username': 'wanjiku', 'password': 'a-strong-pass-123'})
+        self.assertEqual(response.status_code, 403)
