@@ -122,7 +122,9 @@ AUTH_PASSWORD_VALIDATORS = [
 
 LANGUAGE_CODE = 'en-us'
 
-TIME_ZONE = 'UTC'
+# Kenya-first store: timestamps display in East Africa Time. Storage
+# stays UTC because USE_TZ = True - only presentation changes.
+TIME_ZONE = 'Africa/Nairobi'
 
 USE_I18N = True
 
